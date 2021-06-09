@@ -1,6 +1,6 @@
-/* Jan Lukas Piczlewicz, Matrikelnummer: 201328887, 17.12.2020
+/* Jan Lukas Piczlewicz, Matrikelnummer: 201328887, 18.12.2020
 
-Veränderbarer blinkender Balancierer V1.0
+Veränderbarer blinkender Balancierer V1.1
  
 Programm zur Verwendung des "Schedulers", das mithilfe der RGB-LED
 und des Beschleunigungssensors in Abhängigkeit der Neigung die Blinkfrequenz der RGB-LED verändert.
@@ -12,17 +12,15 @@ Zusätzlich kann der Benutzer über die Serielle Schnittstelle durch Eingabe ein
 
 #include <Arduino_LSM9DS1.h>                // Einbinden der Bibliothek zur Verwendung des Beschleunigungssensors.
 #include <Scheduler.h>                      // Einbinden der Bibliothek zur Werwendung der Scheduler-Methode.
-#define POSITIVEABWEICHUNGZULAESSIG 0.3     // Erlaubte Abweichung in [m/s^2] für positive "ax"
-#define NEGATIVEABWEICHUNGZULASESSIG -0.3   // Erlaubte Abweichung in [m/s^2] für negative "ax"
-#define ERDBESCHLEUNIGUNG 9.81              // Erdbeschleunigung in [m/s^2]
-int verzoegerung;                               // globale Variable für die Blinkverzögerung der RGB-LED in [ms]
+                                            // Konstanten wurden entfernt, da sie hier nicht mehr verwendet werden.
+int verzoegerung;                           // globale Variable für die Blinkverzögerung der RGB-LED in [ms]
 int farbe;                                  // globale Variable für die Zuweisung bzw. Änderung der Farbe der RGB-LED  
 
 
 void setup()
 {
   Serial.begin(9600);                       // Schnittstelle wird initialisiert und auf eine übertragung von 9600 Baud eingestellt.
-  verzoegerung = 1000;                       // Startverzögerung von 1000 ms
+  verzoegerung = 1000;                      // Startverzögerung von 1000 ms
   farbe    = 1;                             // Setze die Farbe der LED auf rot
   pinMode(LEDR, OUTPUT);                    // weise die Pins der RGB-LED als Ausgänge zu.
   pinMode(LEDG, OUTPUT);
@@ -42,30 +40,22 @@ void loop ()                                        // Standard Schleife, die di
   statusLedAn();                                    // LED wird angeschaltet.
   delay(verzoegerung);                                  // Verzögerung greift auf den Wert der Frequenzvariable zu.
   statusLedAus();                                   // LED wird ausgeschaltet.
-  delay(verzoegerung);                                     
+  delay(verzoegerung);                                  
 }
 
 void loopUeberPruefeAusrichtung()                    // Schleife, die die Ausrichtung des Nano BLE 33 in x-y Ebene überprüft.
 {
-  float ax, ay, az;                                  // Beschleunigungskomponenten in den jeweiligen Koordinatenrichtungen.          
+  float ax, ay, az;                                  // Beschleunigungskomponenten in den jeweiligen Koordinatenrichtungen in [g]. 1g entspricht hierbei ca. einer Beschleunigung von 9,81 m/s.         
   ax = 0;                                            // Wir nehmen an, dass es keine Beschleunigung bei Beginn des Programms gibt.
   ay = 0;
   az = 0;
   if(IMU.accelerationAvailable())                    // If-Anweisung, die zur Kontrolle des Beschleunigungssensors dient.
   { 
-    IMU.readAcceleration(ax, ay, az);                           // Liest die Beschleunigungswerte des Sensors aus und speichert sie in die genannten Variablen ab.
-    if((ax*ERDBESCHLEUNIGUNG) < (NEGATIVEABWEICHUNGZULASESSIG)) // Überprüft Neigung nach vorn. Die Beschleunigung "ax" ist hier negativ.
-    {  
-      verzoegerung = 100;                                       // Wert der Verzögerung wird auf 100 ms reduziert. 
-    }
-    if((ax*ERDBESCHLEUNIGUNG) > (POSITIVEABWEICHUNGZULAESSIG))  // Analog zu vorheriger If-Anweisung. Hier ist die Beschleunigung von "ax" jedoch positiv.
-    {
-      verzoegerung = 3000;                                      // Wert der Verzögerung wird auf 3 s erhöht.
-    }
-    if((ax*ERDBESCHLEUNIGUNG) > (NEGATIVEABWEICHUNGZULASESSIG) && (ax*ERDBESCHLEUNIGUNG) < (POSITIVEABWEICHUNGZULAESSIG)) // Kontrolliert ob die vorherigen If-Anweisungen beide ausgeschlossen sind.
-    {
-      verzoegerung = 1000;                                      // Wert der Verzögerung wird auf 1s gesetzt.
-    }
+    IMU.readAcceleration(ax, ay, az);                // Liest die Beschleunigungswerte des Sensors aus und speichert sie in die genannten Variablen ab.
+    if(ax > -1)                                      // Obligatorische Abfrage, da Werte kleiner als -1g zu einem negativen Wert für die Verzögerung führen. Dies führte beim Test zu einem Absturz des Programms.
+    {                                                // Die Abfrage ist also notwendig, da bei einer vertikalen Neigung von 90 Grad nach unten, der Wert für ax kleiner als -1g ist (Merkwürdig).
+      verzoegerung = ax*1000+1000;                   // Funktion für die Verzögerung [ms] in Abhängigkeit zur Beschleunigung der Komponente ax. Ist der Arduino horizontal ausgerichtet, leuchtet die LED mit einer Standardverzögerung von 1000ms 
+    }                                                // Die vorherige Überprüfung der Neigung wird nicht mehr benötigt. (Konstanten wurden entfernt)
   }
 }
 
